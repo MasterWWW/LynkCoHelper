@@ -17,6 +17,33 @@
 | `lynkco_notify.py` | Bark、飞书、钉钉、企业微信推送工具 |
 | `lynkco_daily_tasks.py` | 顶层入口：编排签到 + 分享 + 积分查询并推送结果 |
 
+## 自托管版（NAS 网页服务 + 桌面密钥提取器）
+
+除命令行 / GitHub Actions 外，仓库还提供一套自托管形态：
+
+- **NAS 主服务**（`server/`）：Docker 常驻 FastAPI 服务 + 管理网页。网页保存
+  4 个密钥字段、完成极验滑块和短信登录、立即打卡，并展示积分、签到、成长值、
+  分享与任务结果；APScheduler 每天按 `Asia/Shanghai` 自动执行。
+- **桌面密钥提取器**（`desktop/`）：选择领克 4.3.x APK，离线提取
+  `nativeAppKey` / `nativeAppSecret` / `nativeAppCode` / `loginAppCode`，
+  不包含登录、签到或定时逻辑。
+
+使用顺序：
+
+1. 启动容器：在 `server/` 执行 `docker compose up -d --build`。
+2. 打开 `http://<NAS-IP>:8000/`，用桌面提取器输出填写「密钥设置」。
+3. 在网页完成滑块 + 短信登录，随后可手动打卡或等待每日调度。
+
+持久化只依赖挂载卷中的 `env.json`：容器设置
+`LYNKCO_ENV_FILE=/data/env.json`，不要把密钥或 token 改成
+`LYNKCO_APP_SECRETS` / `LYNKCO_TOKEN` 等服务端环境变量。完整部署、端口、
+卷、`LYNKCO_SCHEDULE_CRON`、`LYNKCO_API_TOKEN` 和重启验证见
+[`../server/README.md`](../server/README.md)；桌面端说明见
+[`../desktop/README.md`](../desktop/README.md)。
+
+通知能力继续复用现有 `lynkco_notify` 调用链，配置仍位于 `env.json` 的
+`notify` 段；当前自托管网页**不提供通知设置 UI**，属于后续版本。
+
 ## AppSecret 自动提取
 
 提取 API 密钥（`nativeAppKey` / `nativeAppSecret`），写入 `env.json` 的 `secrets` 段。统一入口支持直接从已验证的 4.3.0 / 4.3.1 APK 离线提取 KeyVault 固定槽位，无需 Android 环境；不含 KeyVault 的 4.2.9 保留模拟器 + jdb 流程。未知 KeyVault 库会明确报错，避免错误套用偏移。

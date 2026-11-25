@@ -22,3 +22,24 @@
 - [ ] 登录滑块验证码全自动化：极验人机验证无法自动完成，仍需人工操作一次
 
 详细说明（配置方式、token 获取、AppSecret 自动提取）见 [`LynkCoHelper/readme.md`](LynkCoHelper/readme.md)。
+
+## NAS 自托管与离线包
+
+NAS 版本提供网页管理、容器内滑块登录、每日/手动签到和持久化登录态。
+源码部署见 [`server/README.md`](server/README.md)。
+
+给不方便拉代码的朋友分发时，构建离线包：
+
+```bash
+bash scripts/build-offline-package.sh
+```
+
+产物为 `release/out/lynkco-helper-offline.zip` 和对应 `.sha256`。压缩包内含
+amd64/arm64 双架构镜像，解压后执行 `sh start.sh` 即可，不需要 git 或镜像仓库。
+“离线”仅指无需拉取代码和镜像，登录、签到仍需访问领克服务器。
+
+如果替朋友预置 4 个应用密钥，可把
+[`release/secrets-only.example.json`](release/secrets-only.example.json) 复制为
+`release/secrets-only.json` 后填写；构建脚本会拒绝包含 `user`/refreshToken
+的文件，避免把个人登录态打进发布包。此时产物会命名为
+`lynkco-helper-offline-preloaded.zip`，只能发给可信朋友。

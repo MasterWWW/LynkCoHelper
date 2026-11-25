@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>LynkCo 密钥提取器</title>
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <div class="grid" aria-hidden="true"></div>
+  <main class="shell">
+    <header class="header">
+      <div class="brand">
+        <span class="mark">L</span>
+        <span>
+          <strong>LynkCo Helper</strong>
+          <small>APK Key Extractor</small>
+        </span>
+      </div>
+      <span class="offline-badge"><i></i> 完全离线</span>
+    </header>
+
+    <section class="hero">
+      <p class="eyebrow">DESKTOP · 4.3.x</p>
+      <h1>从 APK 里，取出<br>网页登录需要的密钥。</h1>
+      <p class="hero-copy">只解析已验证的 ARM64 KeyVault 固定槽位，不上传文件，不登录账号，不执行打卡。提取结果仅在本机显示。</p>
+    </section>
+
+    <section class="picker-card">
+      <div class="picker-main">
+        <div class="file-icon" aria-hidden="true">APK</div>
+        <div class="picker-copy">
+          <strong id="file-name">尚未选择文件</strong>
+          <span id="file-detail">请选择领克 4.3.x APK</span>
+        </div>
+      </div>
+      <div class="picker-actions">
+        <button id="pick-button" class="button button-primary" type="button" disabled>选择 APK</button>
+        <button id="extract-button" class="button button-accent" type="button" disabled>提取密钥</button>
+      </div>
+      <div id="drop-hint" class="drop-hint">
+        <span class="drop-arrow" aria-hidden="true">↓</span>
+        如果文件选择器不可用，也可直接粘贴 APK 的完整路径，再点击「提取密钥」。
+      </div>
+      <label class="path-field" for="apk-path">
+        <span>APK 完整路径（可选）</span>
+        <input id="apk-path" type="text" autocomplete="off" spellcheck="false" placeholder="/path/to/lynkco-4.3.1.apk">
+      </label>
+    </section>
+
+    <p id="status-message" class="status-message" role="status" aria-live="polite">正在连接桌面应用…</p>
+
+    <section id="error-panel" class="error-panel" hidden>
+      <strong>提取未完成</strong>
+      <p id="error-text"></p>
+      <ul>
+        <li>确认 APK 来自领克 4.3.x，且包含 <code>lib/arm64-v8a/libkeyvault.so</code>。</li>
+        <li>4.2.9 或未知加固布局不支持静态提取，请更换 APK。</li>
+      </ul>
+    </section>
+
+    <section id="result-panel" class="result-panel" hidden>
+      <div class="result-heading">
+        <div>
+          <p class="eyebrow">EXTRACTED</p>
+          <h2>4 个密钥字段</h2>
+          <p id="result-file" class="result-file"></p>
+        </div>
+        <div class="result-actions">
+          <button id="toggle-visibility" class="button button-ghost button-small" type="button">隐藏明文</button>
+          <button id="copy-all" class="button button-primary button-small" type="button">复制全部</button>
+        </div>
+      </div>
+      <div id="field-list" class="field-list"></div>
+      <p class="result-tip">按顺序贴入 NAS 管理页的「密钥设置」，保存后不要再次截图或分享。</p>
+    </section>
+
+    <footer class="footer">
+      <span>仅支持领克 4.3.x KeyVault · 固定槽位证据见 <code>appsecret_keyvault.py</code></span>
+      <span>密钥不会离开本机</span>
+    </footer>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="app.js" defer></script>
+</body>
+</html>

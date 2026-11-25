@@ -1,0 +1,14 @@
+.git
+.github
+docs
+desktop
+.DS_Store
+**/__pycache__
+**/*.pyc
+**/env.json
+**/geely_env.json
+**/geetest_helper.html
+**/*.har
+**/res.json
+**/data
+**/last_report.json

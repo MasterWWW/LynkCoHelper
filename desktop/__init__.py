@@ -1,0 +1,1 @@
+"""LynkCo APK key extractor."""

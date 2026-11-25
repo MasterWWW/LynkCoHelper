@@ -29,7 +29,10 @@ import uuid
 
 import requests.exceptions
 
-ENV_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "env.json")
+ENV_FILE = (
+    os.environ.get("LYNKCO_ENV_FILE")
+    or os.path.join(os.path.dirname(os.path.abspath(__file__)), "env.json")
+)
 
 
 def env_value(name: str, default: str = "") -> str:

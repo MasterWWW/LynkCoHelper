@@ -492,6 +492,13 @@ _GEETEST_HTML_TEMPLATE = """<!DOCTYPE html>
         genTime: result.gen_time,
         scene: "{scene}",
       }};
+      try {{
+        window.parent.postMessage(
+          {{type: "geetest-result", payload: payload}}, "*"
+        );
+      }} catch (e) {{
+        // 独立打开页面时没有可用的父窗口，复制粘贴路径仍可继续使用。
+      }}
       var text = JSON.stringify(payload);
       document.getElementById("result-text").value = text;
       document.getElementById("result-box").style.display = "block";
@@ -529,6 +536,26 @@ _GEETEST_HTML_TEMPLATE = """<!DOCTYPE html>
 """
 
 
+def render_geetest_html(config: dict, scene: str) -> str:
+    """把极验配置渲染成可直接嵌入网页的 HTML 字符串。"""
+    data = config.get("data") or {}
+    captcha_id = data.get("captchaId")
+    # gt4.js 固定挂在 apiServer 域名下的 /www/gt4.js，不能用 staticServer 拼接
+    # （那是 gt4.js 加载后再去请求其他资源用的基础路径，会得到 404）。
+    api_server = data.get("apiServer") or "https://captcha4.geely.com"
+    # apiServers 传给 initGeetest() 时必须是纯域名，带 "https://" 协议头会导致请求地址拼接错误。
+    api_server_host = api_server.split("://", 1)[-1].rstrip("/")
+    if not captcha_id:
+        raise RuntimeError(f"极验配置响应中未找到 captchaId: {config}")
+
+    return _GEETEST_HTML_TEMPLATE.format(
+        api_server=api_server,
+        api_server_host=api_server_host,
+        captcha_id=captcha_id,
+        scene=scene,
+    )
+
+
 def generate_geetest_html(scene: str, config: dict = None, device_id: str = None) -> str:
     """
     生成本地极验 GT4 滑块辅助页面，返回写入的 HTML 文件绝对路径。
@@ -543,22 +570,7 @@ def generate_geetest_html(scene: str, config: dict = None, device_id: str = None
             device_id = uuid.uuid4().hex[:16]
         config = get_security_config(device_id)
 
-    data = config.get("data") or {}
-    captcha_id = data.get("captchaId")
-    # gt4.js 固定挂在 apiServer 域名下的 /www/gt4.js，不能用 staticServer 拼接
-    # （那是 gt4.js 加载后再去请求其他资源用的基础路径，会得到 404）。
-    api_server = data.get("apiServer") or "https://captcha4.geely.com"
-    # apiServers 传给 initGeetest() 时必须是纯域名，带 "https://" 协议头会导致请求地址拼接错误。
-    api_server_host = api_server.split("://", 1)[-1].rstrip("/")
-    if not captcha_id:
-        raise RuntimeError(f"极验配置响应中未找到 captchaId: {config}")
-
-    html = _GEETEST_HTML_TEMPLATE.format(
-        api_server=api_server,
-        api_server_host=api_server_host,
-        captcha_id=captcha_id,
-        scene=scene,
-    )
+    html = render_geetest_html(config, scene)
 
     html_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "geetest_helper.html")
     with open(html_path, "w", encoding="utf-8") as f:

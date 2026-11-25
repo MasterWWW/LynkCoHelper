@@ -15,6 +15,14 @@ TABLE_OFFSET = 0x1130
 TABLE_COUNT_OFFSET = 0x1320
 ENTRY_SIZE = 0x7C
 
+# 4.3.1（libkeyvault.so sha256
+# 283359da9143aa660bbc43d6a6f2607fd9c4ff42560fa94a8cbe59da37d0252a）实测槽位：
+#   1/2 -> SWGeelyCode（两套环境，第一套为生产）
+#   3/4 -> user_module （滑块登录所需的 loginAppCode）
+# nativeAppKey/nativeAppSecret 沿用 extract() 默认选择的第一条生产记录。
+NATIVE_APP_CODE = "SWGeelyCode"
+LOGIN_APP_CODE = "user_module"
+
 
 class UnsupportedKeyVault(ValueError):
     """The APK contains a KeyVault layout not recognized by this extractor."""
@@ -83,3 +91,66 @@ def extract(apk_path, app_key=None, app_code=None):
     if len(matches) != 1:
         raise UnsupportedKeyVault("KeyVault 槽位未唯一匹配选择条件")
     return matches.pop()
+
+
+def _extract_records(library):
+    """Read all fixed KeyVault slots in order as (code, key, secret)."""
+    count = struct.unpack_from("<I", library, TABLE_COUNT_OFFSET)[0]
+    if count != 4 or TABLE_OFFSET + count * ENTRY_SIZE != TABLE_COUNT_OFFSET:
+        raise UnsupportedKeyVault("KeyVault 固定槽位数量或位置不符")
+
+    records = []
+    for index in range(count):
+        entry = TABLE_OFFSET + index * ENTRY_SIZE
+        slot = struct.unpack_from("<I", library, entry)[0]
+        code_length = struct.unpack_from("<I", library, entry + 0x1C)[0]
+        key_length = struct.unpack_from("<I", library, entry + 0x34)[0]
+        secret_length = struct.unpack_from("<I", library, entry + 0x78)[0]
+        if not (slot == index + 1 and 0 < code_length <= 11
+                and 0 < key_length <= 9 and secret_length == 32):
+            raise UnsupportedKeyVault("KeyVault 固定槽位元数据不符")
+        code = bytes(library[entry + 4 + i] ^ library[entry + 0xF + i]
+                     for i in range(code_length))
+        key = bytes(library[entry + 0x20 + i] ^ library[entry + 0x29 + i]
+                    for i in range(key_length))
+        secret = bytes(library[entry + 0x38 + i] ^ library[entry + 0x58 + i]
+                       for i in range(secret_length))
+        if not re.fullmatch(rb"[0-9A-Za-z]{32}", secret):
+            raise UnsupportedKeyVault("KeyVault 命中槽位的密钥格式异常")
+        try:
+            records.append((
+                code.decode("ascii"),
+                key.decode("ascii"),
+                secret.decode("ascii"),
+            ))
+        except UnicodeDecodeError as exc:
+            raise UnsupportedKeyVault("KeyVault 槽位编码格式异常") from exc
+    return records
+
+
+def extract_all(apk_path):
+    """Return the four env.json secret fields from a supported 4.3.x APK.
+
+    The native slot is the production SWGeelyCode record (also used by
+    extract()). The login slot is user_module, used only for the slider login
+    endpoint. No other APK layout is accepted.
+    """
+    library = read_library(apk_path)
+    if library is None:
+        raise UnsupportedKeyVault("APK 不含 KeyVault 固定槽位，仅支持 4.3.x")
+    try:
+        records = _extract_records(library)
+    except struct.error as exc:
+        raise UnsupportedKeyVault("KeyVault 固定槽位读取越界，APK 布局不受支持") from exc
+
+    native = next((record for record in records if record[0] == NATIVE_APP_CODE), None)
+    login = next((record for record in records if record[0] == LOGIN_APP_CODE), None)
+    if native is None or login is None:
+        raise UnsupportedKeyVault("KeyVault 未找到 SWGeelyCode/user_module 槽位")
+    _, native_key, native_secret = native
+    return {
+        "nativeAppKey": native_key,
+        "nativeAppSecret": native_secret,
+        "nativeAppCode": NATIVE_APP_CODE,
+        "loginAppCode": login[0],
+    }

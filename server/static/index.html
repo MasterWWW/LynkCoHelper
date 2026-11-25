@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>LynkCo Helper · NAS</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  <div class="backdrop" aria-hidden="true"></div>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="LynkCo Helper 首页">
+      <span class="brand-mark">L</span>
+      <span>
+        <strong>LynkCo Helper</strong>
+        <small>NAS 自托管控制台</small>
+      </span>
+    </a>
+    <div class="token-control">
+      <label for="api-token">访问令牌</label>
+      <input id="api-token" type="password" autocomplete="off" placeholder="未启用可留空">
+      <button id="save-token" class="button button-ghost button-small" type="button">保存</button>
+    </div>
+  </header>
+
+  <main class="shell">
+    <section class="hero" aria-labelledby="hero-title">
+      <div>
+        <p class="eyebrow">PRIVATE AUTOMATION</p>
+        <h1 id="hero-title">你的签到，留在自己的 NAS。</h1>
+        <p class="hero-copy">配置一次密钥与登录态，之后每天自动签到、分享并记录结果。所有凭据只写入挂载卷中的 <code>env.json</code>。</p>
+      </div>
+      <div id="system-badge" class="system-badge is-loading">
+        <span class="pulse"></span>
+        <span id="system-badge-text">正在读取状态</span>
+      </div>
+    </section>
+
+    <section class="dashboard" aria-label="运行概览">
+      <article class="metric-card">
+        <span class="metric-label">密钥</span>
+        <strong id="metric-secrets">—</strong>
+        <small id="metric-secrets-detail">等待读取</small>
+      </article>
+      <article class="metric-card">
+        <span class="metric-label">登录态</span>
+        <strong id="metric-login">—</strong>
+        <small id="metric-login-detail">等待读取</small>
+      </article>
+      <article class="metric-card">
+        <span class="metric-label">最近打卡</span>
+        <strong id="metric-last-run">—</strong>
+        <small id="metric-last-run-detail">暂无记录</small>
+      </article>
+      <article class="metric-card">
+        <span class="metric-label">下次调度</span>
+        <strong id="metric-next-run">—</strong>
+        <small id="metric-schedule-detail">等待读取</small>
+      </article>
+    </section>
+
+    <div class="content-grid">
+      <section id="secrets-card" class="panel" aria-labelledby="secrets-title">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">01 · SECRETS</p>
+            <h2 id="secrets-title">密钥设置</h2>
+          </div>
+          <span id="secrets-badge" class="status-pill">未配置</span>
+        </div>
+        <p class="panel-copy">粘贴桌面提取器输出的 4 个字段。保存后页面不会回显明文。</p>
+        <div id="secrets-pills" class="field-pills" aria-live="polite"></div>
+        <form id="secrets-form" class="stack-form">
+          <label>
+            <span>nativeAppKey</span>
+            <input name="nativeAppKey" type="password" autocomplete="off" spellcheck="false" required>
+          </label>
+          <label>
+            <span>nativeAppSecret</span>
+            <input name="nativeAppSecret" type="password" autocomplete="off" spellcheck="false" required>
+          </label>
+          <label>
+            <span>nativeAppCode</span>
+            <input name="nativeAppCode" type="password" autocomplete="off" spellcheck="false" required>
+          </label>
+          <label>
+            <span>loginAppCode</span>
+            <input name="loginAppCode" type="password" autocomplete="off" spellcheck="false" required>
+          </label>
+          <button class="button button-primary" type="submit">保存密钥</button>
+        </form>
+      </section>
+
+      <section id="login-card" class="panel panel-wide" aria-labelledby="login-title">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">02 · SIGN IN</p>
+            <h2 id="login-title">手机号登录</h2>
+          </div>
+          <span id="login-badge" class="status-pill">未登录</span>
+        </div>
+        <p class="panel-copy">在内嵌页面完成一次极验滑块，随后输入短信验证码。refreshToken 会持久化到挂载卷。</p>
+
+        <form id="login-start-form" class="inline-form">
+          <label class="grow">
+            <span>手机号</span>
+            <input id="phone" name="phone" type="tel" inputmode="numeric" autocomplete="tel" maxlength="20" placeholder="13800000000" required>
+          </label>
+          <button class="button button-primary" type="submit">获取滑块</button>
+        </form>
+
+        <div id="slider-stage" class="login-stage" hidden>
+          <div class="stage-heading">
+            <strong>第 1 步 · 完成滑块</strong>
+            <span id="slider-state" class="muted">等待加载</span>
+          </div>
+          <iframe id="geetest-frame" title="极验滑块验证" referrerpolicy="no-referrer"></iframe>
+          <button id="restart-login" class="button button-ghost button-small" type="button">重新开始</button>
+        </div>
+
+        <form id="sms-form" class="inline-form" hidden>
+          <label class="grow">
+            <span>短信验证码</span>
+            <input id="sms-code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="8" placeholder="6 位验证码" required>
+          </label>
+          <button class="button button-primary" type="submit">完成登录</button>
+        </form>
+        <p id="login-message" class="form-message" role="status" aria-live="polite"></p>
+      </section>
+
+      <section id="run-card" class="panel panel-wide" aria-labelledby="run-title">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">03 · DAILY RUN</p>
+            <h2 id="run-title">打卡与结果</h2>
+          </div>
+          <span id="run-badge" class="status-pill">空闲</span>
+        </div>
+        <div class="run-actions">
+          <button id="run-button" class="button button-accent" type="button">
+            <span class="button-spinner" aria-hidden="true"></span>
+            <span class="button-label">立即签到</span>
+          </button>
+          <p id="run-message" class="form-message" role="status" aria-live="polite">签到与分享会共用运行锁，避免重复执行。</p>
+        </div>
+        <div id="report-panel" class="report-panel" hidden>
+          <div id="report-summary" class="report-summary"></div>
+          <div id="report-metrics" class="report-metrics"></div>
+          <div class="report-columns">
+            <div>
+              <h3>签到与分享</h3>
+              <dl id="report-sign" class="detail-list"></dl>
+            </div>
+            <div>
+              <h3>任务进度</h3>
+              <ul id="report-tasks" class="task-list"></ul>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <footer class="footer">
+      <span>LynkCo Helper · 自托管版</span>
+      <span>时区 Asia/Shanghai · 通知配置保留在 <code>env.json</code>，当前版本不提供 UI</span>
+    </footer>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="/static/app.js" defer></script>
+</body>
+</html>

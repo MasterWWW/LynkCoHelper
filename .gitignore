@@ -11,7 +11,14 @@ __pycache__/
 build/
 develop-eggs/
 dist/
-release/
+# 生成物用 release/* 忽略；下面的发布模板仍需入库
+release/*
+!release/README.txt
+!release/docker-compose.yml
+!release/start.sh
+!release/start.command
+!release/start.bat
+!release/secrets-only.example.json
 downloads/
 eggs/
 .eggs/
@@ -90,6 +97,7 @@ celerybeat-schedule
 # Environments
 .env
 .venv
+.venv-desktop/
 env/
 venv/
 ENV/
@@ -119,6 +127,9 @@ dmypy.json
 /LynkCoHelper/env.json
 /LynkCoHelper/geely_env.json
 /LynkCoHelper/beta/
+
+# NAS 自托管版持久化卷（密钥、登录态与最近报告）
+/server/data/
 
 # 调试/抓包时保存的接口原始响应，可能含真实 token/手机号等敏感信息
 /LynkCoHelper/res.json
@@ -150,3 +161,7 @@ node_modules/
 
 # Local dev cache (miniflare)
 .state/
+
+# 离线发布包产物
+/release/out/
+/release/secrets-only.json
